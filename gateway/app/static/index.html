@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TTS Hub</title>
+  <link rel="stylesheet" href="/admin/static/style.css">
+</head>
+<body>
+  <!-- Login -->
+  <main id="login-view" class="login" hidden>
+    <form id="login-form" class="card login-card">
+      <h1>TTS Hub</h1>
+      <p class="muted">Entre com a sua conta ADM do Guardia.</p>
+      <label>Email <input name="email" type="text" autocomplete="username" required></label>
+      <label>Senha <input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary">Entrar</button>
+      <p id="login-error" class="error" hidden></p>
+    </form>
+  </main>
+
+  <!-- Painel -->
+  <div id="app-view" hidden>
+    <header class="topbar">
+      <div class="brand">TTS Hub <span id="instance" class="tag"></span></div>
+      <div class="who"><span id="who"></span> <button id="logout" class="ghost">Sair</button></div>
+    </header>
+
+    <main class="content">
+      <section>
+        <div class="section-head">
+          <h2>Cadeia de providers</h2>
+          <p class="muted">O 1º habilitado é o principal; os seguintes são o fallback, nessa ordem. Mudança vale na hora.</p>
+        </div>
+        <div id="providers" class="providers"></div>
+      </section>
+
+      <section class="card">
+        <h2>Testar voz</h2>
+        <form id="test-form" class="test-grid">
+          <label class="span-all">Texto
+            <textarea name="text" rows="3" maxlength="3000" required>Olá Maria, informo que no endereço Rua das Flores, 123, disparo de alarme na zona Sala!</textarea>
+          </label>
+          <label>Provider <select name="provider" id="test-provider"></select></label>
+          <label>Voz <input name="voice" placeholder="padrão" list="voice-list"><datalist id="voice-list"></datalist></label>
+          <label>Formato <select name="format" id="test-format"></select></label>
+          <label>Velocidade (%) <input name="speed" type="number" min="-50" max="50" placeholder="padrão"></label>
+          <div class="span-all row">
+            <button type="submit" class="primary">Gerar áudio</button>
+            <span id="test-meta" class="muted"></span>
+          </div>
+          <audio id="test-audio" class="span-all" controls hidden></audio>
+          <p id="test-error" class="error span-all" hidden></p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>API keys</h2>
+        <p class="muted">Uma por consumidor. Prioridade maior passa na frente na fila dos providers limitados (Piper): alarme do Guardia acima de tudo.</p>
+        <form id="key-form" class="row">
+          <input name="name" placeholder="Nome do consumidor (ex.: guardia)" required maxlength="80">
+          <input name="priority" type="number" value="0" min="-100" max="100" title="Prioridade" class="narrow">
+          <button type="submit" class="primary">Criar chave</button>
+        </form>
+        <div id="new-key" class="new-key" hidden>
+          <strong>Copie agora — ela não aparece de novo:</strong>
+          <code id="new-key-value"></code>
+          <button id="copy-key" class="ghost" type="button">Copiar</button>
+        </div>
+        <div class="table-wrap"><table id="keys"><thead><tr>
+          <th>Nome</th><th>Prefixo</th><th>Prioridade</th><th>Último uso</th><th>Criada</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section class="card">
+        <h2>Auditoria</h2>
+        <ul id="audit" class="audit"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="/admin/static/app.js"></script>
+</body>
+</html>

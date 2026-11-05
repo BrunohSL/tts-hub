@@ -1,0 +1,22 @@
+# Desenvolvimento local: docker compose up --build  →  http://localhost:8000/admin
+# Login: admin / dev (acesso local). Sem Discord, sem Guardia.
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - INSTANCE=local
+      - PIPER_URL=http://piper:8000
+      - COOKIE_SECURE=false
+      - SESSION_SECRET=dev-session-secret
+      - ADMIN_LOCAL_PASSWORD=dev
+      - PROBE_INTERVAL_S=600
+    volumes:
+      - ./data:/data
+    depends_on:
+      - piper
+
+  piper:
+    build: ./providers/piper
+    mem_limit: 768m

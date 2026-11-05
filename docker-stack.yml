@@ -1,0 +1,114 @@
+# TTS Hub — stack `ttshub` (gateway + piper).
+#
+# Deploy: bash deploy.sh  (build das imagens + docker stack deploy deste arquivo).
+# Primeira subida: criar os secrets e o DNS antes (README.md, "Primeira subida").
+#
+# Nomes que outros serviços usam (mudar quebra a resolução interna):
+#   ttshub_gateway:8000  — API dos consumidores (Guardia: TTS_URL)
+#   ttshub_piper:8000    — só o gateway chama
+#
+# NÃO renomear a stack para `tts`: é o nome da stack antiga do Guardia (tts_app),
+# e as duas precisam rodar juntas durante a virada.
+version: "3.8"
+
+services:
+  gateway:
+    image: tts-hub-gateway:latest
+    networks:
+      - 6LabNet
+    environment:
+      - INSTANCE=prod
+      - TZ=America/Sao_Paulo
+      - PIPER_URL=http://ttshub_piper:8000
+      # Tem que bater com o PIPER_MAX_CONCURRENT do serviço piper abaixo.
+      - PIPER_MAX_CONCURRENT=1
+      # Login do painel com a conta ADM do Guardia (rede interna).
+      - GUARDIA_AUTH_URL=http://guardia-api_guardia-api:3000
+      - ADMIN_ROLES=ADM
+      - SESSION_SECRET_FILE=/run/secrets/ttshub_session_secret
+      - DISCORD_WEBHOOK_URL_FILE=/run/secrets/ttshub_discord_webhook_url
+      - GUARDIA_SERVICE_KEY_FILE=/run/secrets/ttshub_guardia_service_key
+      - ADMIN_LOCAL_PASSWORD_FILE=/run/secrets/ttshub_admin_local_password
+      - METRICS_TOKEN_FILE=/run/secrets/ttshub_metrics_token
+    secrets:
+      - ttshub_session_secret
+      - ttshub_discord_webhook_url
+      - ttshub_guardia_service_key
+      - ttshub_admin_local_password
+      - ttshub_metrics_token
+    volumes:
+      # SQLite com a config do painel (ordem, liga/desliga, API keys, auditoria).
+      - ttshub_data:/data
+    tmpfs:
+      # Áudio intermediário do ffmpeg: tem nome e endereço de cliente, fica em RAM.
+      - /tmp/ttshub
+    deploy:
+      # 1 réplica: circuit breaker, fila e probes vivem em memória.
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager   # o volume local existe só neste nó
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+      update_config:
+        # Sobe o novo, espera o healthcheck, derruba o velho: deploy sem buraco
+        # nas ligações.
+        order: start-first
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: any
+        delay: 5s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.ttshub.rule=Host(`tts-hub.6lab.com.br`)"
+        - "traefik.http.routers.ttshub.entrypoints=websecure"
+        - "traefik.http.routers.ttshub.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.ttshub.loadbalancer.server.port=8000"
+
+  piper:
+    image: tts-hub-piper:latest
+    networks:
+      - 6LabNet
+    environment:
+      - PIPER_MAX_CONCURRENT=1
+    tmpfs:
+      - /tmp
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          # Medido: 156MB ocioso, pico 475MB com 10 requests na fila (teto de 1
+          # síntese por vez). 768M dá folga sem deixar um vazamento comer o host.
+          cpus: "1.0"
+          memory: 768M
+      update_config:
+        # stop-first: duas instâncias de 768M juntas apertariam a RAM do host.
+        # Enquanto o piper reinicia, o edge segue atendendo.
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+      # Sem labels do Traefik: só o gateway chama, pela rede interna.
+
+volumes:
+  ttshub_data:
+    driver: local
+
+networks:
+  6LabNet:
+    external: true
+
+secrets:
+  ttshub_session_secret:
+    external: true
+  ttshub_discord_webhook_url:
+    external: true
+  ttshub_guardia_service_key:
+    external: true
+  ttshub_admin_local_password:
+    external: true
+  ttshub_metrics_token:
+    external: true

@@ -1,0 +1,9 @@
+# Versões fixas de propósito. edge-tts é cliente NÃO OFICIAL da Microsoft e muda
+# de comportamento entre versões: subir é mudança deliberada, com teste de
+# ligação real depois. 7.2.7 → 7.3.1 em 2026-10-30 (403 da Microsoft).
+edge-tts==7.3.1
+fastapi==0.135.1
+uvicorn==0.42.0
+httpx==0.28.1
+prometheus-client==0.21.1
+itsdangerous==2.2.0
